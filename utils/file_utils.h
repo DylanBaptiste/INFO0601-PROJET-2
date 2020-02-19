@@ -9,7 +9,7 @@
 #include <errno.h>
 #include <unistd.h>
 
-int  createSim(char* decor, int sim_d, unsigned char* buff);
+int createSim(char* decor, int sim_d, unsigned char* buff);
 void writeMap(unsigned char* buffer, int fd);
 int openFile(char* path);
 int openFileSim(char* simFile, unsigned char *buff);

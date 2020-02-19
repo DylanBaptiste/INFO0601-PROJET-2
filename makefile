@@ -87,6 +87,11 @@ archive: clean
 	@echo "Termine."
 
 # DEPENDANCES
-controleur.o: controleur.c utils/ncurses_utils.h utils/file_utils.h utils/config.h
-editeur.o: editeur.c utils/ncurses_utils.h utils/file_utils.h utils/config.h
-voiture.o: voiture.c utils/ncurses_utils.h utils/file_utils.h utils/config.h
+utils/ncurses_utils.o: utils/ncurses_utils.c utils/ncurses_utils.h
+utils/file_utils.o: utils/file_utils.c utils/file_utils.h utils/config.h
+controleur.o: controleur.c utils/ncurses_utils.h utils/file_utils.h \
+ utils/config.h
+editeur.o: editeur.c utils/ncurses_utils.h utils/file_utils.h \
+ utils/config.h
+voiture.o: voiture.c utils/ncurses_utils.h utils/file_utils.h \
+ utils/config.h
