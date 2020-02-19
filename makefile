@@ -3,7 +3,7 @@
 #
 
 EXEC = controleur editeur voiture
-OBJETS = ncurses_utils.o file_utils.o
+OBJETS = utils/ncurses_utils.o utils/file_utils.o
 NOM_PROJET = TP2
 
 #
@@ -36,7 +36,7 @@ CCLIBS = -lncurses
 all: msg $(OBJETS) $(EXEC_O)
 	@echo "Creation des executables..."
 	@for i in $(EXEC); do \
-	$(CC) -o $$i.out $$i.o $(OBJETS) $(CCLIBS); \
+	$(CC) -o $$i $$i.o $(OBJETS) $(CCLIBS); \
 	done
 	@echo "Termine."
 
@@ -87,8 +87,6 @@ archive: clean
 	@echo "Termine."
 
 # DEPENDANCES
-ncurses_utils.o: ncurses_utils.c ncurses_utils.h
-file_utils.o: file_utils.c file_utils.h config.h
-controleur.o: controleur.c ncurses_utils.h file_utils.h config.h
-editeur.o: editeur.c ncurses_utils.h file_utils.h config.h
-voiture.o: voiture.c ncurses_utils.h file_utils.h config.h
+controleur.o: controleur.c utils/ncurses_utils.h utils/file_utils.h utils/config.h
+editeur.o: editeur.c utils/ncurses_utils.h utils/file_utils.h utils/config.h
+voiture.o: voiture.c utils/ncurses_utils.h utils/file_utils.h utils/config.h

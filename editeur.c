@@ -3,10 +3,9 @@
 #include <stdlib.h> 
 #include <unistd.h>
 
-#include "ncurses_utils.h"
-#include "file_utils.h"
-
-#include "config.h"
+#include "utils/ncurses_utils.h"
+#include "utils/file_utils.h"
+#include "utils/config.h"
 
 
 int mWidth, mHeight, fd, mode;
