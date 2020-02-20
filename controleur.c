@@ -19,6 +19,7 @@ unsigned char* map;
 int quitter = FALSE;
 WINDOW *fenetre_log, *fenetre_jeu, *fenetre_etat;
 void placer_element(int y, int x, unsigned char c, bool write);
+void handler(int s);
 key_t CLE_SMP;
 int shmid;
 
@@ -90,6 +91,7 @@ int main(int argc, char** argv) {
 
 /* ============ Boucle de jeu ============ */
     timeout(500);
+    signal(SIGINT, handler);
     while(quitter == FALSE) {
 
         switch (getch())
@@ -122,6 +124,9 @@ int main(int argc, char** argv) {
     exit(EXIT_SUCCESS);
 }
 
+void handler(int s){
+    quitter = s == SIGINT;
+}
 
 void placer_element(int y, int x, unsigned char c, bool write){	
 	switch (c)
@@ -148,3 +153,4 @@ void placer_element(int y, int x, unsigned char c, bool write){
 	}
 	
 }
+

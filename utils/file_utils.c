@@ -118,7 +118,6 @@ void readMap(int fd, unsigned char* buff, unsigned char* titre)
         exit(EXIT_FAILURE);
     }
 
-    
     if(read(fd, &tailleTitre, sizeof(size_t)) == -1){
         perror("Erreur lors de la lecture de la taille du titre");
         exit(EXIT_FAILURE);
@@ -160,7 +159,7 @@ int createSim(char* simFile, int sim_d, unsigned char* buff, unsigned char* titr
     
     
     int decor_d, i;
-    size_t tailleTire = 0;
+    size_t tailleTitre = 0;
     char* path = malloc(sizeof(char) * strlen(simFile) + 1);
     if(path == NULL){
         perror("erreur lors du malloc createSim");
@@ -172,13 +171,16 @@ int createSim(char* simFile, int sim_d, unsigned char* buff, unsigned char* titr
     decor_d = openFile(path);
 
     readMap(decor_d, buff, titre);
+
+    tailleTitre = strlen((char *)titre) + 1;
+
     
-    if(write(sim_d, &tailleTire, sizeof(size_t)) == -1 ){
+    if(write(sim_d, &tailleTitre, sizeof(size_t)) == -1 ){
         perror("Erreur Ecriture");
         exit(EXIT_FAILURE);
     }
 
-    if(write(sim_d, titre, tailleTire) == -1 ){
+    if(write(sim_d, titre, tailleTitre) == -1 ){
         perror("Erreur Ecriture");
         exit(EXIT_FAILURE);
     }
