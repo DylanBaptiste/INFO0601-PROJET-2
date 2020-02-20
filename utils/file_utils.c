@@ -8,7 +8,6 @@
 #include <string.h>
 
 #include "file_utils.h"
-
 #include "config.h"
 
 
@@ -43,14 +42,14 @@ int openFile(char* path)
     return fd;
 }
 
-int openFileSim(char* simFile, unsigned char *buff)
+int openFileSim(char* simFile, unsigned char *buff, unsigned char* titre)
 {
     
     int fd;
     char* path = malloc(sizeof(char) * strlen(simFile) + 1);
     
     if(path == NULL){
-        perror("erreur lors du malloc createSim");
+        perror("erreur lors du malloc openFileSim");
         exit(EXIT_FAILURE);
     }
 
@@ -60,16 +59,16 @@ int openFileSim(char* simFile, unsigned char *buff)
     fd = open(simFile, O_RDWR);
     
     if (fd >= 0){
-        readMap(fd, buff);
+        readMap(fd, buff, titre);
     }
     else if (errno == ENOENT){
         fd = open(simFile, O_RDWR|O_CREAT|O_TRUNC, S_IRWXU);
         
         if (fd >= 0 ){
-            fd = createSim(simFile, fd, buff); 
+            fd = createSim(simFile, fd, buff, titre); 
         }
         else{
-            perror("Erreur lors de l'ouverture du fichier\n");
+            perror("Erreur lors de la creation du fichier de simulation\n");
             exit(EXIT_FAILURE);
         }
     }
@@ -80,25 +79,7 @@ int openFileSim(char* simFile, unsigned char *buff)
     return fd;
 }
 
-/**
- * @brief ecrit un buffer dans un fichier
- * 
- * @param buffer message à ecrire
- * @param fd file descriptor du fichier à remplire
- */
-void writeMap(unsigned char* buffer, int fd)
-{
-    int i;
-    
-    for(i = 0; i < (LARGEUR2 - 2)*(HAUTEUR2 - 2); i++){
-        if(write(fd, buffer+i, sizeof(unsigned char)) == -1 ){
-            perror("Erreur Ecriture");
-            exit(EXIT_FAILURE);
-        }
-    }
 
-   
-}
     
 /**
  * Construit un decor vide
@@ -125,20 +106,34 @@ void constructeurFile(int fd)
  * @param buff le buffer qui doit recevoir le contenu du fichier
  * @return int 
  */
-void readMap(int fd, unsigned char* buff)
+void readMap(int fd, unsigned char* buff, unsigned char* titre)
 {
+    int i = 0;
     int taille = 0;
-    int state;
     unsigned char lecture;
+    size_t tailleTitre = 0;
     
     if (lseek(fd,0, SEEK_SET) == -1 ){
         perror("Erreur Lors du LSEEK readmap");
         exit(EXIT_FAILURE);
     }
 
+    
+    if(read(fd, &tailleTitre, sizeof(size_t)) == -1){
+        perror("Erreur lors de la lecture de la taille du titre");
+        exit(EXIT_FAILURE);
+    }
+    for(i = 0; i < tailleTitre; ++i){
+        if(read(fd, &lecture, sizeof(unsigned char)) == -1){
+            perror("Erreur lors de la lecture du titre");
+            exit(EXIT_FAILURE);
+        }
+        titre[i] = lecture;
+    }
+
+
     do{
-        state = read(fd, &lecture, sizeof(unsigned char));
-        if(state == -1){
+        if(read(fd, &lecture, sizeof(unsigned char)) == -1){
             perror("Erreur lors de la lecture de la map, case par defaut");
             buff[taille++] = 0;
         }else{
@@ -161,10 +156,11 @@ void readMap(int fd, unsigned char* buff)
  * 
  * @param decor 
  */
-int createSim(char* simFile, int sim_d, unsigned char* buff){
+int createSim(char* simFile, int sim_d, unsigned char* buff, unsigned char* titre){
     
     
-    int decor_d;
+    int decor_d, i;
+    size_t tailleTire = 0;
     char* path = malloc(sizeof(char) * strlen(simFile) + 1);
     if(path == NULL){
         perror("erreur lors du malloc createSim");
@@ -175,9 +171,25 @@ int createSim(char* simFile, int sim_d, unsigned char* buff){
     strcat(path, ".bin");
     decor_d = openFile(path);
 
-    readMap(decor_d, buff);
+    readMap(decor_d, buff, titre);
+    
+    if(write(sim_d, &tailleTire, sizeof(size_t)) == -1 ){
+        perror("Erreur Ecriture");
+        exit(EXIT_FAILURE);
+    }
 
-    writeMap(buff, sim_d);
+    if(write(sim_d, titre, tailleTire) == -1 ){
+        perror("Erreur Ecriture");
+        exit(EXIT_FAILURE);
+    }
+
+    
+    for(i = 0; i < (LARGEUR2 - 2)*(HAUTEUR2 - 2); i++){
+        if(write(sim_d, buff+i, sizeof(unsigned char)) == -1 ){
+            perror("Erreur Ecriture");
+            exit(EXIT_FAILURE);
+        }
+    }
 
     return sim_d;
 }
@@ -228,7 +240,22 @@ char* getFileBase (const char* path) {
  * @param fd file descriptor du fichier a modifier
  */
 void insertElement(int fd, int x, int y, unsigned char element){
-    if ( lseek(fd, (LARGEUR2 - 2)*x+y, SEEK_SET) == -1 ){
+    size_t tailleTitre = 0;
+
+    if (lseek(fd,0, SEEK_SET) == -1 ){
+        perror("Erreur Lors du LSEEK insertElement");
+        exit(EXIT_FAILURE);
+    }
+    if(read(fd, &tailleTitre, sizeof(size_t)) == -1){
+        perror("Erreur lors de la lecture de la taille du titre");
+        exit(EXIT_FAILURE);
+    }
+    if (lseek(fd, tailleTitre, SEEK_CUR) == -1 ){
+        perror("Erreur Lors du LSEEK insertElement");
+        exit(EXIT_FAILURE);
+    }
+
+    if ( lseek(fd, MAP_LARGEUR*x+y+1, SEEK_CUR) == -1 ){
         perror("Erreur Lors du LSEEK insertElement");
         exit(EXIT_FAILURE);
     }

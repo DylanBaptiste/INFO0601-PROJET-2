@@ -6,11 +6,12 @@
 #include "utils/ncurses_utils.h"
 #include "utils/file_utils.h"
 #include "utils/config.h"
+#include "utils/gestion_erreur.h"
 
-
-int mWidth, mHeight, fd, mode;
+int fd;
+int quitter = FALSE;
 unsigned char restartX, restartY, nbFlocon;
-unsigned char** matrice;
+unsigned char map[ MAP_HAUTEUR * MAP_LARGEUR ];
 WINDOW *fenetre_log, *fenetre_jeu, *fenetre_etat;
 
 
@@ -21,37 +22,14 @@ void generation();
 int main(int argc, char** argv) {
 	
 	int i, j, k, startMenu, sourisX, sourisY, bouton;
-	int quitter = FALSE;
 	WINDOW *box_jeu, *box_etat, *box_log;
-	unsigned char* mapBuffer = malloc((LARGEUR2 - 2)*(HAUTEUR2 - 2) + 1 * sizeof(unsigned char));
-	if(mapBuffer == NULL){
-        perror("erreur lors du malloc ");
-        exit(EXIT_FAILURE);
-    }
-	
-	
+	unsigned char titre[MAXFNAME];
 
 	fenetre_log  = NULL;
 	fenetre_jeu  = NULL;
 	fenetre_etat = NULL;
 
-	mWidth  = LARGEUR2 - 2;
-	mHeight = HAUTEUR2 - 2;
-	matrice = malloc(mHeight * sizeof( unsigned char*));
 
-	if(matrice == NULL){
-        perror("erreur lors du malloc ");
-        exit(EXIT_FAILURE);
-    }
-	for(i = 0; i < mWidth; i++){
-		matrice[i] = malloc(mWidth * sizeof(unsigned char));
-		if(matrice[i] == NULL){
-			perror("erreur lors du malloc ");
-			exit(EXIT_FAILURE);
-    	}
-	}
-
-	
 	if(argc != 2){
 		printf("mauvaise utilisation: ./editeur [<path>]\n");
 		exit(EXIT_FAILURE);
@@ -64,8 +42,8 @@ int main(int argc, char** argv) {
                 exit(EXIT_FAILURE);
             }
             
-            readMap(fd, mapBuffer);
-            mode = DEC_MODE;
+            readMap(fd, map, titre);
+			printf("titre: %s", titre);
         }else{
             printf("le decor doit etre un fichier .bin\n");
             exit(EXIT_FAILURE);
@@ -80,6 +58,7 @@ int main(int argc, char** argv) {
 	box_jeu  = create_box(&fenetre_jeu,  HAUTEUR2, LARGEUR2, POSY2, POSX2);
 	box_etat = create_box(&fenetre_etat, HAUTEUR3, LARGEUR3, POSY3, POSX3);
 	
+	mvwprintw(box_jeu,  0, 3, "%s", (char*)titre);
 	mvwprintw(box_log,  0, 3, "Logs");
 	mvwprintw(box_etat, 0, 3, "Etat");
 	wrefresh(box_log );
@@ -88,9 +67,9 @@ int main(int argc, char** argv) {
 
 	scrollok(fenetre_log, TRUE);	
 	
-	for(i = 0, k = 0; i < mHeight; i++){
-		for(j = 0; j < mWidth; j++, k++){
-			placer_element(i, j, mapBuffer[k], false);
+	for(i = 0, k = 0; i < MAP_HAUTEUR; i++){
+		for(j = 0; j < MAP_LARGEUR; j++, k++){
+			placer_element(i, j, map[k], false);
 		}
 	}
 	
@@ -101,7 +80,7 @@ int main(int argc, char** argv) {
     mvwprintw(fenetre_etat, ++startMenu, 0, "-------");
     mvwprintw(fenetre_etat, ++startMenu, 0, "Quitter:    F2");
     ++startMenu;
-    mvwprintw(fenetre_etat, ++startMenu, 0, "Route:   +");
+    mvwprintw(fenetre_etat, ++startMenu, 0, "Obstacle:   +");
     mvwprintw(fenetre_etat, ++startMenu, 0, "-------");
     wrefresh(fenetre_etat);
 
@@ -119,9 +98,12 @@ int main(int argc, char** argv) {
                 if( (sourisX >= 0 && sourisX < (LARGEUR2 - 2) ) && ( (sourisY - POSY2) < HAUTEUR2 - 2 && (sourisY - POSY2) >= 0) ){
                     
                     if( is_free(sourisY - POSY2, sourisX) ){
-                        placer_element(sourisY - POSY2, sourisX, 1, true);
+                        placer_element(sourisY - POSY2, sourisX, MUR, true);
+						wprintw(fenetre_log, "placement %d (%d,%d)\n", MUR, sourisY - POSY2, sourisX);
                     }else{
-                        placer_element(sourisY - POSY2, sourisX , 0, true);
+                        placer_element(sourisY - POSY2, sourisX , ROUTE, true);
+						wprintw(fenetre_log, "placement %d (%d,%d)\n", ROUTE, sourisY - POSY2, sourisX);
+
                     }
                     wrefresh(fenetre_jeu);
                     
@@ -156,7 +138,7 @@ int main(int argc, char** argv) {
 	close(fd);
 
 	/*free( matrice ); 
-	free( mapBuffer );
+	free( map );
 
 
 	if( ERR == delwin(fenetre_log)){
@@ -194,24 +176,24 @@ int main(int argc, char** argv) {
 /*=== Définitions des fonctions ===*/
 
 
-int is_free(int y, int x){ return matrice[y][x] == 0; }
+int is_free(int y, int x){ return map[MAP_LARGEUR*y+x] == ROUTE; }
 
 void placer_element(int y, int x, unsigned char c, bool write){
 		
 	switch (c)
 	{
-		case VIDE:
+		case MUR:
 			mvwprintw(fenetre_jeu, y, x, "+");
+			map[MAP_LARGEUR*y+x] = c;
 			break;
 		case ROUTE :
 			mvwprintw(fenetre_jeu, y, x, " ");
+			map[MAP_LARGEUR*y+x] = c;
 			break;
 	
-		default:
-            
+		default: 
             mvwprintw(fenetre_jeu, y, x, "?");
-
-            
+			map[MAP_LARGEUR*y+x] = c;
 			break;
 	}
 

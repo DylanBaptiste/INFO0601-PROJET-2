@@ -3,7 +3,7 @@
 #
 
 EXEC = controleur editeur voiture
-OBJETS = utils/ncurses_utils.o utils/file_utils.o
+OBJETS = utils/ncurses_utils.o utils/file_utils.o utils/gestion_erreur.o
 NOM_PROJET = TP2
 
 #
@@ -92,6 +92,6 @@ utils/file_utils.o: utils/file_utils.c utils/file_utils.h utils/config.h
 controleur.o: controleur.c utils/ncurses_utils.h utils/file_utils.h \
  utils/config.h
 editeur.o: editeur.c utils/ncurses_utils.h utils/file_utils.h \
- utils/config.h
+ utils/config.h utils/gestion_erreur.h utils/config.h
 voiture.o: voiture.c utils/ncurses_utils.h utils/file_utils.h \
  utils/config.h

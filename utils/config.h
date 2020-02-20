@@ -1,13 +1,15 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+#define DEV 1
+
 #define LARGEUR1 80
 #define HAUTEUR1 5
 #define POSX1    0
 #define POSY1    0
 
-#define LARGEUR2 30 
-#define HAUTEUR2 15  
+#define LARGEUR2 (30 + 2) 
+#define HAUTEUR2 (15 + 2)  
 #define POSX2    POSX1
 #define POSY2    HAUTEUR1
 
@@ -28,7 +30,7 @@
 #define MAP_HAUTEUR (HAUTEUR2 - 2)
 #define MAP_LARGEUR (LARGEUR2 - 2)
 
-#define VIDE 0
+#define MUR 0
 #define ROUTE 1
 
 #endif
