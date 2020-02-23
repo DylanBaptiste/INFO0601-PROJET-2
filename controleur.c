@@ -45,30 +45,7 @@ int main(int argc, char** argv) {
             exit(EXIT_FAILURE);
         }		
 	}
-
-/* ============ Mise en place du Segment de Memoire Partagee ============ */
-    /* Création d'un segment de  MAP_HAUTEUR * MAP_LARGEUR  unsigned char */
-    if((shmid = shmget(CLE_SMP, sizeof(unsigned char) *  MAP_HAUTEUR * MAP_LARGEUR, S_IRUSR | S_IWUSR | IPC_CREAT | IPC_EXCL)) == -1) {
-        if(errno == EEXIST) fprintf(stderr, "Le segment de mémoire partagée (cle=%d) existe deja\n", CLE_SMP);
-        else perror("Erreur lors de la création du segment de mémoire ");
-        exit(EXIT_FAILURE);
-    }
-    fprintf(stdout, "Controleur: segment crée.\n");
-
-    /* Attachement du segment de mémoire partagée */
-    if((map = shmat(shmid, NULL, 0)) == (void*)-1) {
-        perror("Erreur lors de l'attachement du segment de mémoire partagée ");
-        exit(EXIT_FAILURE);
-    }
-
-    /* Placement des entiers dans le segment de mémoire partagée */
-    for(i = 0, k = 0; i < MAP_HAUTEUR; i++){
-		for(j = 0; j < MAP_LARGEUR; j++, k++){
-			placer_element(i, j, map[k], false);
-		}
-	}
-    fprintf(stdout, "Controleur: map placée dans le segment.\n");
-
+    signal(SIGINT, handler); /*Liberation memoire gerer si SIGINT recus*/
 
 /* ============ Mise en place graphique ============ */
     ncurses_initialiser();
@@ -89,11 +66,36 @@ int main(int argc, char** argv) {
     mvwprintw(fenetre_etat, ++startMenu, 0, "Obstacle:      +");
     mvwprintw(fenetre_etat, ++startMenu, 0, "-------");
 
-/* ============ Boucle de jeu ============ */
-    timeout(500);
-    signal(SIGINT, handler);
-    while(quitter == FALSE) {
+/* ============ Mise en place du Segment de Memoire Partagee ============ */
+    if((shmid = shmget(CLE_SMP, sizeof(unsigned char) *  MAP_HAUTEUR * MAP_LARGEUR, S_IRUSR | S_IWUSR | IPC_CREAT | IPC_EXCL)) == -1) {
+        if(errno == EEXIST) fprintf(stderr, "Le segment de mémoire partagée (cle=%d) existe deja\n", CLE_SMP);
+        else perror("Erreur lors de la création du segment de mémoire ");
+            ncurses_stopper(); /*coupure de ncurses*/
 
+        exit(EXIT_FAILURE);
+    }
+    /*fprintf(stdout, "Controleur: segment crée.\n");*/
+
+    if((map = shmat(shmid, NULL, 0)) == (void*)-1) {
+        perror("Erreur lors de l'attachement du segment de mémoire partagée ");
+            ncurses_stopper(); /*coupure de ncurses*/
+
+        exit(EXIT_FAILURE);
+    }
+    readMap(fd, map, titre);
+    for(i = 0, k = 0; i < MAP_HAUTEUR; i++){
+		for(j = 0; j < MAP_LARGEUR; j++, k++){
+			placer_element(i, j, map[k], false);
+		}
+	}
+
+    /*fprintf(stdout, "Controleur: map placée dans le segment.\n");*/
+
+
+/* ============ Boucle de jeu ============ */
+    /*timeout(500);*/
+    while(quitter == FALSE) {
+        wprintw(fenetre_log, "salut");
         switch (getch())
         {
             case KEY_F(2):
@@ -104,7 +106,7 @@ int main(int argc, char** argv) {
                 /*generation();*/
                 break;
         }
-        
+       
         wrefresh(fenetre_jeu);
         wrefresh(fenetre_etat);
         wrefresh(fenetre_log);
@@ -113,14 +115,12 @@ int main(int argc, char** argv) {
 
 /* ============ Liberation memoire ============ */
     
+    ncurses_stopper(); /*coupure de ncurses*/
+
     /* Suppression du segment de mémoire partagée */
     if(shmctl(shmid, IPC_RMID, 0) == -1) {
         perror("Erreur lors de la suppression du segment de mémoire partagée ");
-        exit(EXIT_FAILURE);
     }
-    
-    ncurses_stopper(); /*coupure de ncurses*/
-
     exit(EXIT_SUCCESS);
 }
 
@@ -129,22 +129,25 @@ void handler(int s){
 }
 
 void placer_element(int y, int x, unsigned char c, bool write){	
-	switch (c)
+    switch (c)
 	{
 		case MUR:
 			mvwprintw(fenetre_jeu, y, x, "+");
+            map[MAP_LARGEUR*y+x] = MUR;
 			break;
 		case ROUTE :
 			mvwprintw(fenetre_jeu, y, x, " ");
+            map[MAP_LARGEUR*y+x] = ROUTE;
 			break;
 	
 		default:
             if(c > nbV + 2){
                 mvwprintw(fenetre_jeu, y, x, "?");
-
             }else{
                 mvwprintw(fenetre_jeu, y, x, "V");
             }
+            map[MAP_LARGEUR*y+x] = c;
+
 			break;
 	}
 

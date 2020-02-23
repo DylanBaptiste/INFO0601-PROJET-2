@@ -30,34 +30,52 @@ void ReceptionFileConfig(msqid){
   /* IPC_NOWAIT
   *  Revient immédiatement si aucun message du type désiré n'est présent. L'appel système échoue et errno est renseignée avec ENOMSG. 
   */
-  if(msgrcv(msqid, &requete, sizeof(requete_t) - sizeof(long), TYPE_CONFIG | TYPE_MODIFCARTE, IPC_NOWAIT ) == -1) {
+  if(msgrcv(msqid, &requete, sizeof(requete_t) - sizeof(long), TYPE_SEND , MSG_EXCEPT   ) == -1) {
+     /* EINTR Un signal est arrivé avant d'avoir pu lire quoi que ce soit.  */
 
-    if (errno != ENOMSG){
+    if (errno == EINTR){
+      
+      perror("erreur signal ");
+      
+    }
+    if (errno == -1 ){
     perror("Erreur lors de la réception d'une requête ");
-    exit(EXIT_FAILURE);}
+    exit( EXIT_FAILURE);
+    }
   }
-  else{
-    printf("coucou");
-    if (requete.type == TYPE_CONFIG){
+  else {
+  switch(requete.type){
+    case TYPE_CONFIG:
+    printf("Reception TYPE CONFIG");
       pid = requete.data.RecupConfig.pid;
-      printf("Serveur : requête reçue son pid est : %d\n", requete.data.RecupConfig.pid);
+      printf("Serveur : requête reçue son pid est : %d\n", pid);
       ReponseFile(msqid,pid);
       printf("Serveur : reponse send");
-    }
-    else if(requete.type == TYPE_MODIFCARTE){
-      /*LOWL JE SAIS PAS IL FAUT FAIRE QUOI LA */
-      printf("Type modif recu ");
-    }
+    break;
+    case TYPE_MODIFCARTE:
+      printf("Reception TYPE MODIFCARTE");
+      pid = requete.data.ModifCarte.pid;
+      printf("Serveur : requête reçue son pid est : %d\n", requete.data.ModifCarte.pid);
+      ReponseFile(msqid,pid);
+      printf("Serveur : reponse send");
+    break;
+
+    default:
+
+    break;
+  }
   }
 }
+
+
 
 void ReponseFile(msqid,pid){
 
   requete_t requete;
-  requete.type = pid;
+  requete.type = TYPE_SEND;
   requete.data.SendConfig.cle_sem = 10;
   requete.data.SendConfig.cle_smp = 10;
-
+  printf("%d \n",pid);
   if(msgsnd(msqid, &requete, sizeof(requete_t) - sizeof(long), 0) == -1) {
     perror("Erreur lors de l'envoi de la reponse ");
     exit(EXIT_FAILURE);
@@ -105,7 +123,7 @@ int main(int argc, char *argv[]){
 
   msqid = CreationFile();
   while (noStopSignal == 1){
-  
+    
     ReceptionFileConfig(msqid);
     
   }

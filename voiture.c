@@ -11,7 +11,7 @@
 #include "utils/config.h"
 
 unsigned char* map;
-key_t CLE_SMP = 669;
+key_t CLE_SMP;
 
 int shmid;
 
@@ -25,7 +25,14 @@ int main(int argc, char** argv) {
     int i, j, k;
 
     map = malloc( MAP_HAUTEUR * MAP_LARGEUR * sizeof(unsigned char));
-
+    CLE_SMP = atoi(argv[1]);
+    
+    
+    /*envoie de la demande, recuperation*/
+    
+    
+    
+    
     /* Récupération du segment de mémoire partagée */
     if((shmid = shmget((key_t)CLE_SMP, 0, 0)) == -1) {
         perror("Erreur lors de la récupération du segment de mémoire partagée ");
@@ -38,16 +45,16 @@ int main(int argc, char** argv) {
         perror("Erreur lors de l'attachement du segment de mémoire partagée ");
         exit(EXIT_FAILURE);
     }
-
     /* Lecture de la map dans le segment de mémoire partagée */
-    for(i = 0, k = 0; i < MAP_HAUTEUR; i++){
-		for(j = 0; j < MAP_LARGEUR; j++, k++){
-			printf("%d", map[k]);
-		}
-	}
-    printf("\n");
-        
-
+    while(1){
+        sleep(1);
+        for(i = 0, k = 0; i < MAP_HAUTEUR; i++){
+            for(j = 0; j < MAP_LARGEUR; j++, k++){
+                printf("%d", map[k]);
+            }
+        }
+        printf("\n");
+    }
     /* Détachement du segment de mémoire partagée */
     if(shmdt(map) == -1) {
         perror("Erreur lors du détachement du segment de mémoire partagée ");

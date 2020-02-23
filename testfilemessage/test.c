@@ -13,7 +13,7 @@ int main() {
   }
   pid = getpid();
   /* Envoi d'une requête */
-  requete.type = TYPE_CONFIG;
+  requete.type = TYPE_MODIFCARTE;
   requete.data.RecupConfig.pid = pid;
 
   if(msgsnd(msqid, &requete, sizeof(requete_t) - sizeof(long), 0) == -1) {
@@ -24,7 +24,7 @@ int main() {
   printf("%d ",pid);
   /* Réception de la réponse */
   printf("Client : attente de la reponse...\n");
-  if(msgrcv(msqid, &requete, sizeof(requete) - sizeof(long), getpid(), 0) == -1) {
+  if(msgrcv(msqid, &requete, sizeof(requete) - sizeof(long), TYPE_SEND, 0) == -1) {
     perror("Erreur lors de la réception de la réponse ");
     exit(EXIT_FAILURE);    
   }
