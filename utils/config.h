@@ -66,7 +66,7 @@ typedef struct sendConfig_type{
 /* Structure pour la modification de la carte au controleur */
 typedef struct ModifCarte_type{
     pid_t pid;
-    int y, x, identifiant;
+    int y, x, old_x, old_y, identifiant;
 }ModifCarte_t;
 
 /* Structure pour la notification de connexion reussie */
@@ -78,6 +78,7 @@ typedef struct ConnexionReussie_type{
 /* Structure pour la notification de deconnexion */
 typedef struct Deco_type{
     pid_t pid;
+    int x, y;
     int identifiant;
 }Deco_t;
 

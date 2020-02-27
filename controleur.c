@@ -1,15 +1,18 @@
+#define _POSIX_SOURCE
 #include <string.h>
 #include <time.h>
 #include <stdlib.h> 
 #include <unistd.h>
 #include <signal.h>
 #include <stdio.h> 
-#include <sys/shm.h>    /* Pour shmget, shmat, shmdt */
-#include <errno.h>      /* Pour errno */
-#include <sys/stat.h>   /* Pour S_IRUSR, S_IWUSR */
+#include <sys/shm.h>
+#include <errno.h>
+#include <sys/stat.h>
 #include "utils/ncurses_utils.h"
 #include "utils/file_utils.h"
 #include "utils/config.h"
+#include "sys/types.h"
+
 #define MESSAGE_SIZE 10
 
 typedef struct voiture_type{
@@ -18,6 +21,7 @@ typedef struct voiture_type{
     int y, x;
 }voiture_t;
 
+void killVoitures();
 
 int nbV, fd = 0;
 unsigned char* map;
@@ -32,11 +36,8 @@ unsigned short* semvals;
 pid_t* tableauPID;
 /*int getVoitureIndex(pid_t pid);*/
 void V(int semid, int s);
-
 void P(int semid, int s);
-
 bool try_P(int semid, int s);
-
 int try_co(int SEM_id);
 
 void clean_ncurses();
@@ -44,58 +45,25 @@ void clean_SEM();
 void clean_MQ();
 void clean_SMP();
 
-int isExist(pid_t pid){
-    int i = 0;
-    for(i = 0; i < nbV; ++i){
-        if(tableauPID[i] == pid){
-            return i;
-        }
-    }
-    return -1;
-}
-
-void ajouterPid(pid_t pid){
-    int i;
-    if(isExist(pid) == -1){
-        for(i = 0; i < nbV; ++i){
-            if(tableauPID[i] == pid){
-                return i;
-            }
-        }
-    }
-}
-
-
 int main(int argc, char** argv) {
 /* ============ Variables locales ============ */
-    int i, j, k, startMenu, oldX, oldY;
+    int i, j, k, startMenu;
     WINDOW *box_log, *box_jeu, *box_etat;
 	unsigned char titre[MAXFNAME];
     unsigned short semvals[2];
     requete_t requete;
     requete_t reponse;
     
-    
 /* ============ INIT ============ */
-    signal(SIGINT, handler);/*Liberation memoire gerer si SIGINT recus*/
-    /*struct sigaction action;
-    sigemptyset(&action.sa_mask);
-    action.sa_flags = 0;
-    action.sa_handler = handler;
-
-    if (sigaction(SIGINT, &action, NULL) == -1)
-    {
-        perror("Erreur lors du positionnement du gestionnaire ");
-        exit(EXIT_FAILURE);
-    }*/
+    signal(SIGINT, handler);
 
     if(argc != 6){
 		fprintf(stdout, "mauvaise utilisation: ./controleur [<path>] [<nombre voitures>] [<CLE de Segment Memoire Partagee>]  [<CLE de File Messages>] [<CLE Semaphores>]\n");
 		exit(EXIT_FAILURE);
 	}else{
-		nbV           = atoi(argv[2]);
-        SMP_key       = atoi(argv[3]);
-        MQ_key        = atoi(argv[4]);
+		nbV        = atoi(argv[2]);
+        SMP_key    = atoi(argv[3]);
+        MQ_key     = atoi(argv[4]);
         SEM_key    = atoi(argv[5]);
         
         map = malloc( MAP_HAUTEUR * MAP_LARGEUR * sizeof(unsigned char) + 2 * sizeof(unsigned char) * nbV);
@@ -103,15 +71,6 @@ int main(int argc, char** argv) {
 
         if(strcmp(getFileExt(argv[1]), "sim") == 0){
             fd = openFileSim(argv[1], map, titre);
-            /*
-            listeVoitures = malloc( nbV * sizeof(voiture_t));
-            for(i = 0; i < nbV; ++i){
-                listeVoitures[i].numero = i;
-                listeVoitures[i].pid = -1;
-                listeVoitures[i].y = -1;
-                listeVoitures[i].x = -1;
-            }
-            */
            semvals[0] = nbV;
            semvals[1] = 1;
            /* semvals  = malloc( 2 * sizeof(unsigned short));
@@ -161,8 +120,8 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
     readMap(fd, map, titre);
-    for(i = MAP_HAUTEUR * MAP_LARGEUR; i < MAP_HAUTEUR * MAP_LARGEUR + 2 * nbV ; i ++ ){
-        map[i]   = 255;
+    for(i = MAP_HAUTEUR * MAP_LARGEUR; i < MAP_HAUTEUR * MAP_LARGEUR + 2 * nbV; i++ ){
+        map[i] = 255;
     }
 
     
@@ -218,9 +177,12 @@ int main(int argc, char** argv) {
 /* ============ Boucle de jeu ============ */
     
     
-    timeout(500);
-
-    while(getch() != KEY_F(2) || quitter == FALSE){
+    /*timeout(500);*/
+    if(atexit(killVoitures) != 0) {
+        perror("Probleme lors de l'enregistrement clean_ncurses");
+        exit(EXIT_FAILURE);
+    }
+    while(/*getch() != KEY_F(2) || */quitter == FALSE){
 
         wrefresh(fenetre_jeu);
         wrefresh(fenetre_etat);
@@ -259,6 +221,9 @@ int main(int argc, char** argv) {
 
                 case TYPE_MODIFCARTE:
                     wprintw(fenetre_log, "Reception: MODIFCARTE\n");
+                    wprintw(fenetre_log, "Voiture n°%d: (%d, %d)\n", requete.data.ModifCarte.identifiant, requete.data.ModifCarte.y, requete.data.ModifCarte.x);
+                    placer_element(requete.data.ModifCarte.old_y, requete.data.ModifCarte.old_x, ROUTE, false);
+                    placer_element(requete.data.ModifCarte.y, requete.data.ModifCarte.x, requete.data.ModifCarte.identifiant + 2, false);
                     wrefresh(fenetre_jeu);
                     wrefresh(fenetre_log);
                     break;
@@ -271,6 +236,7 @@ int main(int argc, char** argv) {
                 case TYPE_DECO:
                     wprintw(fenetre_log, "Reception: DECO\n");
                     tableauPID[requete.data.Deco.identifiant] = 0;
+                    placer_element(requete.data.Deco.y, requete.data.Deco.x, ROUTE, false);
                     break;
 
                 default:
@@ -285,6 +251,17 @@ int main(int argc, char** argv) {
 
     exit(EXIT_SUCCESS);
 }
+
+void killVoitures(){
+    int i;
+    for(i = 0; i < nbV; ++i){
+        if(tableauPID[i] != 0){
+            kill(tableauPID[i], SIGINT);
+        }
+    }
+}
+
+
 void clean_SEM(){
     fprintf(stdout, "clean_SEM\n");
     /* Suppression du tableau de semaphore */
@@ -404,11 +381,9 @@ void placer_element(int y, int x, unsigned char c, bool write){
 	{
 		case MUR:
 			mvwprintw(fenetre_jeu, y, x, "+");
-            map[MAP_LARGEUR*y+x] = MUR;
 			break;
 		case ROUTE :
 			mvwprintw(fenetre_jeu, y, x, " ");
-            map[MAP_LARGEUR*y+x] = ROUTE;
 			break;
 	
 		default:
@@ -417,11 +392,8 @@ void placer_element(int y, int x, unsigned char c, bool write){
             }else{
                 mvwprintw(fenetre_jeu, y, x, "V");
             }
-            map[MAP_LARGEUR*y+x] = c;
-
 			break;
 	}
-    wrefresh(fenetre_jeu);
 	if( write == true){
 		insertElement(fd, y, x, c);
 	}
