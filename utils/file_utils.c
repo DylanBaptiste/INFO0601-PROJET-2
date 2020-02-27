@@ -269,3 +269,76 @@ void insertElement(int fd, int x, int y, unsigned char element){
 }
 
 
+void writePosVoiture(int fd, int n, unsigned char y, unsigned char x){
+    size_t tailleTitre;
+    
+    if(lseek(fd, 0, SEEK_SET) == -1 ){
+        perror("Erreur Lors du LSEEK writePosVoiture");
+        exit(EXIT_FAILURE);
+    }
+    if(read(fd, &tailleTitre, sizeof(size_t)) == -1){
+        perror("Erreur lors de la lecture de la taille du titre");
+        exit(EXIT_FAILURE);
+    }
+    if (lseek(fd, tailleTitre + (MAP_LARGEUR * MAP_HAUTEUR) + (n * 2 * sizeof(unsigned char)) , SEEK_CUR) == -1 ){
+        perror("Erreur Lors du LSEEK insertElement");
+        exit(EXIT_FAILURE);
+    }
+
+    if(write(fd, &y, sizeof(unsigned char)) == -1 ){
+        perror("Erreur Ecriture y");
+        exit(EXIT_FAILURE);
+    }
+    if(write(fd, &x, sizeof(unsigned char)) == -1 ){
+        perror("Erreur Ecriture x");
+        exit(EXIT_FAILURE);
+    }
+}
+
+unsigned int readPosVoitureX(int fd, int n){
+    size_t tailleTitre;
+    unsigned char x = -1;
+    if(lseek(fd, 0, SEEK_SET) == -1 ){
+        perror("Erreur Lors du LSEEK writePosVoiture");
+        exit(EXIT_FAILURE);
+    }
+    if(read(fd, &tailleTitre, sizeof(size_t)) == -1){
+        perror("Erreur lors de la lecture de la taille du titre");
+        exit(EXIT_FAILURE);
+    }
+    if (lseek(fd, tailleTitre + (MAP_LARGEUR * MAP_HAUTEUR * sizeof(unsigned char)) + (n * 2 * sizeof(unsigned char)) +  sizeof(unsigned char) , SEEK_CUR) == -1 ){
+        perror("Erreur Lors du LSEEK insertElement");
+        exit(EXIT_FAILURE);
+    }
+
+    if(read(fd, &x, sizeof(unsigned char)) == -1 ){
+        perror("Erreur lecture x");
+        exit(EXIT_FAILURE);
+    }
+    
+    return x;
+}
+
+unsigned int readPosVoitureY(int fd, int n){
+    size_t tailleTitre;
+    unsigned char y = -1;
+    if(lseek(fd, 0, SEEK_SET) == -1 ){
+        perror("Erreur Lors du LSEEK writePosVoiture");
+        exit(EXIT_FAILURE);
+    }
+    if(read(fd, &tailleTitre, sizeof(size_t)) == -1){
+        perror("Erreur lors de la lecture de la taille du titre");
+        exit(EXIT_FAILURE);
+    }
+    if (lseek(fd, tailleTitre + (MAP_LARGEUR * MAP_HAUTEUR * sizeof(unsigned char)) + (n * 2 * sizeof(unsigned char)), SEEK_CUR) == -1 ){
+        perror("Erreur Lors du LSEEK insertElement");
+        exit(EXIT_FAILURE);
+    }
+
+    if(read(fd, &y, sizeof(unsigned char)) == -1 ){
+        perror("Erreur lecture y");
+        exit(EXIT_FAILURE);
+    }
+    
+    return y;
+}

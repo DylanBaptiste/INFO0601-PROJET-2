@@ -33,4 +33,65 @@
 #define MUR 0
 #define ROUTE 1
 
+
+
+#include <sys/msg.h>
+#include <sys/sem.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include  <sys/types.h>
+#include  <signal.h>
+#include  <sys/ipc.h>
+#include  <sys/shm.h>
+
+
+#define TYPE_CONFIG 1
+#define TYPE_MODIFCARTE 2
+#define TYPE_COREUSSIE 3
+#define TYPE_DECO 4
+#define TYPE_SEND 5
+
+/* Structure de connexion au controleur */
+typedef struct RecupConfig_type{
+    pid_t pid;
+}RecupConfig_t;
+
+/* Structure pour l'envoie des infos à la voiture */
+typedef struct sendConfig_type{
+    key_t cle_sem;
+    key_t cle_smp;
+}sendConfig_t;
+
+
+/* Structure pour la modification de la carte au controleur */
+typedef struct ModifCarte_type{
+    pid_t pid;
+    int y, x, identifiant;
+}ModifCarte_t;
+
+/* Structure pour la notification de connexion reussie */
+typedef struct ConnexionReussie_type{
+    pid_t pid;
+    int identifiant;
+}ConnexionReussie_t;
+
+/* Structure pour la notification de deconnexion */
+typedef struct Deco_type{
+    pid_t pid;
+    int identifiant;
+}Deco_t;
+
+/* Structure Union le type en renvoie doit etre le pid (controleur -> Voiture) */
+typedef struct requete_type{
+    long type; 
+    union 
+    {
+        RecupConfig_t RecupConfig;
+        sendConfig_t SendConfig;
+        ModifCarte_t ModifCarte;
+        ConnexionReussie_t ConnexionReussie;
+        Deco_t Deco;
+    }data;
+}requete_t;
+
 #endif

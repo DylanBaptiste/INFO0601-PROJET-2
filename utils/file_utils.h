@@ -18,5 +18,7 @@ char* getFileBase (const char* path);
 void insertElement(int fd, int x, int y, unsigned char element);
 void constructeurFile(int fd);
 void writeTitle(int fd, unsigned char c);
-
+void writePosVoiture(int fd, int n, unsigned char y, unsigned char x);
+unsigned int readPosVoitureX(int fd, int n);
+unsigned int readPosVoitureY(int fd, int n);
 #endif
