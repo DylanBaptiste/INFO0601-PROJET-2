@@ -18,6 +18,8 @@
 #define POSX3    LARGEUR2  
 #define POSY3    HAUTEUR1  
 
+#define SEM_BLOCK 5
+
 #define START_MENU	2
 
 #define SIM_MODE 0

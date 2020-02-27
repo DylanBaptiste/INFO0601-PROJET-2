@@ -82,7 +82,22 @@ bool try_P(int semid, int s)
     return true;
 }
 
-int is_free(int y, int x){ return map[MAP_LARGEUR*y+x] == ROUTE; }
+int getSEM(double y, double x){
+    double i, j;
+    i = y * (MAP_HAUTEUR / SEM_BLOCK) / MAP_HAUTEUR + ( (double)((int)x * (MAP_HAUTEUR / SEM_BLOCK) / MAP_HAUTEUR) <= (x * (MAP_HAUTEUR / SEM_BLOCK) / MAP_HAUTEUR) );
+    j = x * (MAP_LARGEUR / SEM_BLOCK) / MAP_LARGEUR + ( (double)((int)x * (MAP_LARGEUR / SEM_BLOCK) / MAP_LARGEUR) <= (x * (MAP_LARGEUR / SEM_BLOCK) / MAP_LARGEUR) );
+    /*fprintf(stdout, "(%d, %d) (%d %d) => %d\n", (int)y, (int)x, (int)i, (int)j, ( ( (int)i - 1 ) * (MAP_LARGEUR / SEM_BLOCK) + ( (int)j ) ));*/
+    return ( ( (int)i - 1 ) * (MAP_LARGEUR / SEM_BLOCK) + ( (int)j ) );
+}
+
+int is_free(int y, int x){
+    int res, index;
+    index = getSEM(y, x);
+    P(SEM_id, index);
+    res = map[MAP_LARGEUR*y+x] == ROUTE;
+    V(SEM_id, index);
+    return res;
+}
 
 int randomRange(int min, int max){
     return (rand() % (max - min + 1)) + min; 
@@ -103,17 +118,13 @@ int getIdentifiant(taille){
 
 int main(int argc, char** argv) {
     struct shmid_ds smp_info;
-    int old_x, old_y;
-    /*struct timespec ts;*/
-    /*struct timespec tsRand;*/
+    int old_x, old_y, speed;
 
-
-    
-/*map = malloc( MAP_HAUTEUR * MAP_LARGEUR * sizeof(unsigned char));*/
     signal(SIGINT, handler); /*Liberation memoire gerer si SIGINT recus*/
     MQ_key = atoi(argv[1]);
-    /*ts.tv_sec = 0;
-    ts.tv_nsec = (long)atoi(argv[2]);*/
+    speed = atoi(argv[2]);
+
+
     /* Récupération de la file */
     if((MQ_id = msgget((key_t)MQ_key, 0)) == -1) {
         perror("Erreur lors de la récupération de la file ");
@@ -174,8 +185,6 @@ int main(int argc, char** argv) {
         perror("Probleme lors de l'enregistrement detachementSMP");
        exit(EXIT_FAILURE);
     }
-
-    P(SEM_id, 1);
     
     /*recupêraton des infos du SMP*/
     if( shmctl(SMP_id, IPC_STAT, &smp_info) == -1) {
@@ -202,12 +211,15 @@ int main(int argc, char** argv) {
        exit(EXIT_FAILURE);
     }
     
+
     srand(time(NULL) * (int)getpid());
 
     do{
-        y = randomRange(0, MAP_HAUTEUR);
-        x = randomRange(0, MAP_LARGEUR);
+        y = randomRange(0, MAP_HAUTEUR - 1);
+        x = randomRange(0, MAP_LARGEUR - 1);
     }while(!is_free(y, x));
+
+
     
     map[MAP_HAUTEUR * MAP_LARGEUR + 2 * identifiant]     = x;
     map[MAP_HAUTEUR * MAP_LARGEUR + 2 * identifiant + 1] = y;
@@ -225,7 +237,7 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    V(SEM_id, 1);
+    
     while (quitter == FALSE)
     {
         
@@ -236,20 +248,17 @@ int main(int argc, char** argv) {
         switch (direction)
         {
             case 0:
-                P(SEM_id, 1);
-                if( y < MAP_HAUTEUR && is_free(y+1, x)){
+                if( y < MAP_HAUTEUR - 1 && is_free(y+1, x)){
                     map[MAP_LARGEUR*y+x] = ROUTE;
                     y++;
                     map[MAP_HAUTEUR * MAP_LARGEUR + 2 * identifiant + 1] = y;
                     map[MAP_LARGEUR*y+x] = identifiant + 2;
                 }
                 else{
-                    direction = (int)(rand() % 4);
+                    direction = randomRange(0, 3);
                 }
-                V(SEM_id, 1);
                 break;
             case 1:
-                P(SEM_id, 1);
                 if( y > 0 && is_free(y-1, x)){
                     map[MAP_LARGEUR*y+x] = ROUTE;
                     y--;
@@ -257,25 +266,21 @@ int main(int argc, char** argv) {
                     map[MAP_LARGEUR*y+x] = identifiant + 2;
                 }
                 else{
-                    direction = (int)(rand() % 4);
+                    direction = randomRange(0, 3);
                 }
-                V(SEM_id, 1);
                 break;
             case 2:
-                P(SEM_id, 1);
-                if( x < MAP_LARGEUR && is_free(y, x+1)){
+                if( x < MAP_LARGEUR - 1 && is_free(y, x+1)){
                     map[MAP_LARGEUR*y+x] = ROUTE;
                     x++;
                     map[MAP_HAUTEUR * MAP_LARGEUR + 2 * identifiant] = x;
                     map[MAP_LARGEUR*y+x] = identifiant + 2;
                 }
                 else{
-                    direction = (int)(rand() % 4);
+                    direction = randomRange(0, 3);
                 }
-                V(SEM_id, 1);
                 break;
             case 3:
-                P(SEM_id, 1);
                 if( x > 0 && is_free(y, x-1)){
                     map[MAP_LARGEUR*y+x] = ROUTE;
                     x--;
@@ -283,9 +288,8 @@ int main(int argc, char** argv) {
                     map[MAP_LARGEUR*y+x] = identifiant + 2;
                 }
                 else{
-                    direction = (int)(rand() % 4);
+                    direction = randomRange(0, 3);
                 }
-                V(SEM_id, 1);
                 break;
             
             default:
@@ -314,10 +318,7 @@ int main(int argc, char** argv) {
             }
         }
         
-        
-        /*nanosleep (&ts, NULL);*/
-        /*sleep(1);*/
-        usleep(50000);
+        usleep(speed);
     }
 
 
@@ -325,22 +326,49 @@ int main(int argc, char** argv) {
 		
 }
 void deconnexion(){
+    struct msqid_ds buf;
 
-    map[MAP_LARGEUR*y+x] = ROUTE;
-    map[MAP_HAUTEUR * MAP_LARGEUR + 2 * identifiant]     = 255;
-    map[MAP_HAUTEUR * MAP_LARGEUR + 2 * identifiant + 1] = 255;
+    if( msgctl(MQ_id, IPC_STAT, &buf) == -1) {
+       switch (errno)
+        {
+            case EACCES:
+                perror("Impossible d'avoir les stats");
+                exit(EXIT_FAILURE);
+                break;
+            case EFAULT:
+                perror("sem_buf pointe en-dehors de l'espace d'adressage accessible");
+                exit(EXIT_FAILURE);
+                break;
+            case EIDRM:
+                /*La file de messages a déjà été supprimée. donc je previens pas de ma deco*/
+                break;
+            case EINVAL:
+                /*perror("Mauvais ID");
+                exit(EXIT_FAILURE);*/
+                break;            
+            default:
+                break;
+        }
+    }else{
+        /*La file est toujours presente, je previens de ma deconnexion*/
+        map[MAP_LARGEUR*y+x] = ROUTE;
+        map[MAP_HAUTEUR * MAP_LARGEUR + 2 * identifiant]     = 255;
+        map[MAP_HAUTEUR * MAP_LARGEUR + 2 * identifiant + 1] = 255;
 
-    /* Envoi de la requete de deconnexion */
-    requete.type = TYPE_DECO;
-    requete.data.Deco.identifiant = identifiant;
-    requete.data.Deco.x = x;
-    requete.data.Deco.y = y;
-    requete.data.Deco.pid = getpid();
-
-    fprintf(stdout, "Tentative de deconnexion...\n");
-    if(msgsnd(MQ_id, &requete, sizeof(requete_t) - sizeof(long), 0) == -1) {
-        perror("Erreur lors de l'envoi de la requête ");
+        /* Envoi de la requete de deconnexion */
+        requete.type = TYPE_DECO;
+        requete.data.Deco.identifiant = identifiant;
+        requete.data.Deco.x = x;
+        requete.data.Deco.y = y;
+        requete.data.Deco.pid = getpid();
+        fprintf(stdout, "Tentative de deconnexion...\n");
+        if(msgsnd(MQ_id, &requete, sizeof(requete_t) - sizeof(long), 0) == -1) {
+            perror("Erreur lors de l'envoi de la requête ");
+            exit(EXIT_FAILURE);
+        }
     }
+
+   
 }
 
 void libererPlace(){
@@ -349,35 +377,37 @@ void libererPlace(){
     if(semctl(SEM_id, 0, IPC_STAT, &sem_buf) == -1) {
         switch (errno)
         {
-        case EACCES:
-            perror("Impossible d'avoir les stats");
-            exit(EXIT_FAILURE);
-            break;
-        case EFAULT:
-            perror("sem_buf pointe en-dehors de l'espace d'adressage accessible");
-            exit(EXIT_FAILURE);
-            break;
-        case EIDRM:
-            /*perror("pointe sur un segment détruit.");*/
-            /**/
-            break;
-        case EINVAL:
-            /*perror("Mauvais ID");
-            exit(EXIT_FAILURE);*/
-            break;
-        case EOVERFLOW:
-            perror("valeur de GID ou d'UID est trop grande pour être stockée dans la structure pointée par buf");
-            exit(EXIT_FAILURE);
-            break;
-        
-        default:
-            break;
+            case EACCES:
+                perror("Impossible d'avoir les stats");
+                exit(EXIT_FAILURE);
+                break;
+            case EFAULT:
+                perror("semid_ds pointe en-dehors de l'espace d'adressage accessible");
+                exit(EXIT_FAILURE);
+                break;
+            case EIDRM:
+                /*perror("pointe sur un segment détruit.");*/
+                fprintf(stdout, "EIDRM Pas besoin de libérer ma place");
+                break;
+            case EINVAL:
+                fprintf(stdout, "EINVAL Pas besoin de libérer ma place");
+                /*perror("Mauvais ID") ?? l'id est pas mauvais pourtant, on est ici quand le controleur a delete les SEM et que la voiture tente de V(0), je m'attendais à EIDRM;*/
+                /*exit(EXIT_FAILURE);*/
+                break;
+            case EOVERFLOW:
+                perror("La valeur de GID ou d'UID est trop grande pour être stockée dans la structure pointée par buf");
+                exit(EXIT_FAILURE);
+                break;
+            
+            default:
+                break;
         }
     }else{
         /*liberation de la place*/
-        fprintf(stdout, "Je libere ma place");
+        fprintf(stdout, "Je libere ma place...\n");
         V(SEM_id, 0);
     }
+    fprintf(stdout, "C'est la fin pour moi D:\n");
     
 }
 

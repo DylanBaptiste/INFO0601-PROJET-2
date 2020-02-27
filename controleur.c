@@ -32,7 +32,7 @@ void handler(int s);
 key_t SMP_key, MQ_key, SEM_key;
 int SMP_id, MQ_id, SEM_id;
 voiture_t* listeVoitures;
-unsigned short* semvals;
+unsigned short* SEM_vals;
 pid_t* tableauPID;
 /*int getVoitureIndex(pid_t pid);*/
 void V(int semid, int s);
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     int i, j, k, startMenu;
     WINDOW *box_log, *box_jeu, *box_etat;
 	unsigned char titre[MAXFNAME];
-    unsigned short semvals[2];
+    unsigned short SEM_vals[ 1 + ( (MAP_LARGEUR / SEM_BLOCK) * (MAP_LARGEUR / SEM_BLOCK) ) ]; /*Si block de 5 par 5 => [0] semaphore places voitures et [1...18] ceux pour syncroniser le SMP*/
     requete_t requete;
     requete_t reponse;
     
@@ -71,11 +71,8 @@ int main(int argc, char** argv) {
 
         if(strcmp(getFileExt(argv[1]), "sim") == 0){
             fd = openFileSim(argv[1], map, titre);
-           semvals[0] = nbV;
-           semvals[1] = 1;
-           /* semvals  = malloc( 2 * sizeof(unsigned short));
-            semvals[0] = nbV;
-            for(i = 1; i < 2-1; ++i){ semvals[i] = 1; }*/
+            SEM_vals[0] = nbV;
+            for(i = 1; i < 1 + ( (MAP_LARGEUR / SEM_BLOCK) * (MAP_LARGEUR / SEM_BLOCK) ); ++i){ SEM_vals[i] = 1; }
         }
         else{
             fprintf(stderr, "la simulation doit etre un fichier .sim\n");
@@ -85,7 +82,7 @@ int main(int argc, char** argv) {
 
 /* ============ Mise en place des Semaphores ============ */
 
-    if ((SEM_id = semget((key_t)SEM_key, 2, S_IRUSR | S_IWUSR | IPC_CREAT | IPC_EXCL)) == -1){
+    if ((SEM_id = semget((key_t)SEM_key, 19, S_IRUSR | S_IWUSR | IPC_CREAT | IPC_EXCL)) == -1){
         if (errno == EEXIST)
             fprintf(stderr, "Tableau de semaphores (cle %d) deja existante\n", SEM_key);
         else
@@ -93,7 +90,7 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
     /*init sem*/
-    if (semctl(SEM_id, 0, SETALL, semvals) == -1){
+    if (semctl(SEM_id, 0, SETALL, SEM_vals) == -1){
         perror("Erreur semctl SETALL\n");
         exit(EXIT_FAILURE);
     }
